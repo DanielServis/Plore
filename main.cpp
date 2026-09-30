@@ -364,7 +364,7 @@ int main()
                 if (selecting)
                 {
                     std::string command = "cd " + current_directory + " && ./" + binary_names[i];
-                    int rc = std::system(command.c_str());
+                    std::system(command.c_str());
                     selecting = false;
                 }
             }
