@@ -25,3 +25,19 @@ std::string run_command(const std::string &command)
     pclose(pipe);
     return out;
 }
+
+bool is_binary(const std::string &path, size_t sample = 8192)
+{
+    std::ifstream f(path, std::ios::binary);
+    if (!f)
+        return false;
+
+    char buf[8192];
+    f.read(buf, std::min(sample, sizeof(buf)));
+    std::streamsize n = f.gcount();
+
+    for (std::streamsize i = 0; i < n; ++i)
+        if (buf[i] == '\0')
+            return true;
+    return false;
+}

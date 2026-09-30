@@ -16,14 +16,20 @@ void main()
 
     switch (ID)
     {
+        case 0:
+            colour = vec3(0.75, 0.75, 0.75);
+            break;
         case 1:
-            colour = vec3(0.0, 0.0, 1.0);
+            colour = vec3(0.75, 0.5, 0.5);
             break;
         case 2:
-            colour = vec3(0.0, 1.0, 0.0);
+            colour = vec3(0.5, 0.5, 0.75);
+            break;
+        case 3:
+            colour = vec3(0.5, 0.75, 0.5);
             break;
         default:
-            colour = vec3(1.0, 0.0, 0.0);
+            colour = vec3(0.75, 0.75, 0.75);
     }
 
     vec3 viewDir = normalize(-FragPos);

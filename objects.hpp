@@ -18,13 +18,23 @@ class Object
     protected:
         Transform transform;
         Model model;
-        Object(float x, float y, float z, const Mesh &mesh, int fragment_id);
+        Object(float x, float y, float z, float pitch, float yaw, float roll, const Mesh &mesh, int fragment_id);
+};
+
+class Center : public Object
+{
+    public:
+        Center(float x, float y, float z, float pitch, float yaw, float roll);
+        ~Center();
+
+    private:
+        static Mesh create_mesh();
 };
 
 class Binary : public Object
 {
     public:
-        Binary(float x, float y, float z);
+        Binary(float x, float y, float z, float pitch, float yaw, float roll);
         ~Binary();
 
     private:
@@ -34,7 +44,7 @@ class Binary : public Object
 class File : public Object
 {
     public:
-        File(float x, float y, float z);
+        File(float x, float y, float z, float pitch, float yaw, float roll);
         ~File();
 
     private:
@@ -44,7 +54,7 @@ class File : public Object
 class Directory : public Object
 {
     public:
-        Directory(float x, float y, float z);
+        Directory(float x, float y, float z, float pitch, float yaw, float roll);
         ~Directory();
 
     private:

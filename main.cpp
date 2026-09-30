@@ -1,5 +1,7 @@
 #include <iostream>
 using namespace std;
+#include <filesystem>
+namespace fs = std::filesystem;
 #include <cstdlib>
 #include <unistd.h>
 #include <cmath>
@@ -105,40 +107,18 @@ int main()
     glfwSetKeyCallback(window, Input::key_callback);
     glfwSetMouseButtonCallback(window, Input::mouse_button_callback);
 
+    std::string current_directory = "/home/dms";
+    int total = 0, directories = 0, files = 0, binaries = 0;
+    Center *center = new Center(0, 0, 0, 0, 0, 0);
+    Binary *binary_renders[256];
+    std::string binary_names[256];
     File *file_renders[256];
+    std::string file_names[256];
     Directory *directory_renders[256];
-
-    std::string current_directory = "";
-
-    std::string output = run_command("cd " + current_directory + "&& ls -1p");
-
-    int total = 0, directories = 0, files = 0;
-    std::istringstream ss(output);
-    std::string line;
-    while (std::getline(ss, line))
-    {
-        printf(".");
-
-        if (line.empty())
-            continue;
-        total++;
-        if (line.back() == '/')
-            directories++;
-        else
-            files++;
-    }
-
-    std::cout << "&" << directories << ", " << files << std::endl;
-
-    for (int i = 0; i < directories; i++)
-    {
-        directory_renders[i] = new Directory(-5 + (i * 1.5), 0, 1);
-    }
-
-    for (int i = 0; i < files; i++)
-    {
-        file_renders[i] = new File(-5 + (i * 1.5), 0, -1);
-    }
+    std::string directory_names[256];
+    const float selected_elevation = 1;
+    float file_selected = -1;
+    bool selecting = false;
 
     float camera_x = 0, camera_y = 0;
 
@@ -148,12 +128,10 @@ int main()
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         glViewport(0, 0, fbWidth, fbHeight);
 
-        glClearColor(0.133f, 0.141f, 0.212f, 1.0f);
+        glClearColor(0.133f, 0.141f, 0.212f, 1.0f); 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
-
-
 
         if (Input::get_key_down(GLFW_KEY_LEFT))
         {
@@ -186,23 +164,176 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+        static bool previous_refresh = false;
+        static bool lock_refresh = false;
+        bool current_refresh = Input::get_key_down(GLFW_KEY_SPACE);
+        //if (current_refresh && !previous_refresh)
+        if (1)
+        {
+            for (int i = 0; i < directories; i++)
+            {
+                free(directory_renders[i]);
+                directory_renders[i] = nullptr;
+            }
 
+            for (int i = 0; i < files; i++)
+            {
+                free(file_renders[i]);
+                file_renders[i] = nullptr;
+            }
 
-        
+            for (int i = 0; i < binaries; i++)
+            {
+                free(binary_renders[i]);
+                binary_renders[i] = nullptr;
+            }
 
-        
+            total = 0;
+            directories = 0;
+            files = 0;
+            binaries = 0;
+
+            for (const auto &entry : fs::directory_iterator(current_directory))
+            {
+                total++;
+                if (entry.is_directory())
+                {
+                    directory_names[directories] = entry.path().filename().string();
+                    directories++;
+                }
+                else if (is_binary(entry.path().string()))
+                {
+                    binaries++;
+                }
+                else if (entry.is_regular_file())
+                {
+                    files++;
+                }
+            }
+
+            const float spacing = 1.5f;
+            const float startDist = 3.0f; 
+
+            auto trianglePos = [&](int i, float yaw, float &x, float &y, float &z)
+            {
+                int row = (int)((sqrtf(8.0f * i + 1.0f) - 1.0f) / 2.0f);
+                int col = i - row * (row + 1) / 2;
+
+                float lx = (col - row / 2.0f) * spacing;
+                float lz = startDist + row * spacing;
+
+                float c = cosf(yaw), s = sinf(yaw);
+                x = lx * c + lz * s;
+                z = -lx * s + lz * c;
+
+                float t = (float)i / 25.0f;
+                y = -(t * t);
+            };
+
+            for (int i = 0; i < directories; i++)
+            {
+                float x, y, z;
+                trianglePos(i, 0.0f, x, y, z);
+                directory_renders[i] = new Directory(x, y, z, 0, 0.0f, 0);
+            }
+
+            for (int i = 0; i < files; i++)
+            {
+                float x, y, z;
+                trianglePos(i, -2.1f, x, y, z);
+                file_renders[i] = new File(x, y, z, 0, -2.1f, 0);
+            }
+
+            for (int i = 0; i < binaries; i++)
+            {
+                float x, y, z;
+                trianglePos(i, 2.1f, x, y, z);
+                binary_renders[i] = new Binary(x, y, z, 0, 2.1f, 0);
+            }
+
+            lock_refresh = !lock_refresh;
+        }
+        previous_refresh = current_refresh;
+
+        static bool previous_fincrement = false;
+        static bool lock_fincrement = false;
+        bool current_fincrement = Input::get_key_down(GLFW_KEY_LEFT_SHIFT);
+        if (current_fincrement && !previous_fincrement)
+        {
+            file_selected++;
+
+            if (file_selected > (binaries + files + directories))
+            {
+                file_selected = 0;
+            }
+
+            lock_fincrement = !lock_fincrement;
+        }
+        previous_fincrement = current_fincrement;
+
+        static bool previous_selection = false;
+        static bool lock_selection = false;
+        bool current_selection = Input::get_key_down(GLFW_KEY_ENTER);
+        if (current_selection && !previous_selection)
+        {
+            selecting = true;
+
+            lock_selection = !lock_selection;
+        }
+        previous_selection = current_selection;
+
+        center->get_transform()->pitch += 0.1;
+        center->get_transform()->yaw += 0.1;
+        center->get_transform()->roll += 0.1;
+        center->draw(modelLoc, objectTypeLoc);
 
         for (int i = 0; i < directories; i++)
         {
+            if (i == file_selected)
+            {
+                directory_renders[i]->get_transform()->y += selected_elevation;
+
+                if (selecting)
+                {
+                    directory_renders[i]->get_transform()->y += selected_elevation;
+                    std::cout << directory_names[i] << '\n';
+                    current_directory.append("/" + directory_names[i]);
+                    selecting = false;
+                }
+            }
+
             directory_renders[i]->draw(modelLoc, objectTypeLoc);
         }
 
         for (int i = 0; i < files; i++)
         {
+            if (i == (file_selected - directories))
+            {
+                file_renders[i]->get_transform()->y += selected_elevation;
+
+                if (selecting)
+                {
+                    selecting = false;
+                }
+            }
+
             file_renders[i]->draw(modelLoc, objectTypeLoc);
         }
 
+        for (int i = 0; i < binaries; i++)
+        {
+            if (i == (file_selected - directories - files))
+            {
+                binary_renders[i]->get_transform()->y += selected_elevation;
 
+                if (selecting)
+                {
+                    selecting = false;
+                }
+            }
+
+            binary_renders[i]->draw(modelLoc, objectTypeLoc);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
