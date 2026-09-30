@@ -22,6 +22,9 @@ namespace fs = std::filesystem;
 #include "models.hpp"
 #include "objects.hpp"
 
+float delta_time = 0;
+float last_time = 0.0f;
+
 int main()
 {
     if (!glfwInit())
@@ -52,8 +55,15 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    std::string vertexShaderSource = load_file("shader_vertex.glsl");
-    std::string fragmentShaderSource = load_file("shader_fragment.glsl");
+#ifndef SHADER_DIR
+#define SHADER_DIR "."
+#endif
+
+    std::string vertex_path = std::string(SHADER_DIR) +"/shader_vertex.glsl";
+    std::string fragment_path = std::string(SHADER_DIR) + "/shader_fragment.glsl";
+
+    std::string vertexShaderSource = load_file(vertex_path.c_str());
+    std::string fragmentShaderSource = load_file(fragment_path.c_str());
     if (vertexShaderSource.empty() || fragmentShaderSource.empty())
     {
         return -1;
@@ -127,6 +137,10 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
+        float current_time = glfwGetTime();
+        delta_time = current_time - last_time;
+        last_time = current_time;
+
         int fbWidth, fbHeight;
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         glViewport(0, 0, fbWidth, fbHeight);
@@ -175,130 +189,126 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        static bool previous_refresh = false;
-        static bool lock_refresh = false;
-        bool current_refresh = Input::get_key_down(GLFW_KEY_SPACE);
-        //if (current_refresh && !previous_refresh)
-        if (1)
+        for (int i = 0; i < directories; i++)
         {
-            for (int i = 0; i < directories; i++)
-            {
-                free(directory_renders[i]);
-                directory_renders[i] = nullptr;
-            }
-
-            for (int i = 0; i < files; i++)
-            {
-                free(file_renders[i]);
-                file_renders[i] = nullptr;
-            }
-
-            for (int i = 0; i < binaries; i++)
-            {
-                free(binary_renders[i]);
-                binary_renders[i] = nullptr;
-            }
-
-            total = 0;
-            directories = 0;
-            files = 0;
-            binaries = 0;
-
-            for (const auto &entry : fs::directory_iterator(current_directory))
-            {
-                total++;
-                if (entry.is_directory())
-                {
-                    directory_names[directories] = entry.path().filename().string();
-                    directories++;
-                }
-                else if (is_binary(entry.path().string()))
-                {
-                    binary_names[binaries] = entry.path().filename().string();
-                    binaries++;
-                }
-                else if (entry.is_regular_file())
-                {
-                    file_names[files] = entry.path().filename().string();
-                    files++;
-                }
-            }
-
-            const float spacing = 1.5f;
-            const float startDist = 3.0f; 
-
-            auto trianglePos = [&](int i, float yaw, float &x, float &y, float &z)
-            {
-                int row = (int)((sqrtf(8.0f * i + 1.0f) - 1.0f) / 2.0f);
-                int col = i - row * (row + 1) / 2;
-
-                float lx = (col - row / 2.0f) * spacing;
-                float lz = startDist + row * spacing;
-
-                float c = cosf(yaw), s = sinf(yaw);
-                x = lx * c + lz * s;
-                z = -lx * s + lz * c;
-
-                float t = (float)i / 25.0f;
-                y = -(t * t);
-            };
-
-            for (int i = 0; i < directories; i++)
-            {
-                float x, y, z;
-                trianglePos(i, 0.0f, x, y, z);
-                directory_renders[i] = new Directory(x, y, z, 0, 0.0f, 0);
-            }
-
-            for (int i = 0; i < files; i++)
-            {
-                float x, y, z;
-                trianglePos(i, -2.1f, x, y, z);
-                file_renders[i] = new File(x, y, z, 0, -2.1f, 0);
-            }
-
-            for (int i = 0; i < binaries; i++)
-            {
-                float x, y, z;
-                trianglePos(i, 2.1f, x, y, z);
-                binary_renders[i] = new Binary(x, y, z, 0, 2.1f, 0);
-            }
-
-            lock_refresh = !lock_refresh;
+            free(directory_renders[i]);
+            directory_renders[i] = nullptr;
         }
-        previous_refresh = current_refresh;
 
-        static bool previous_fincrement = false;
-        static bool lock_fincrement = false;
-        bool current_fincrement = Input::get_key_down(GLFW_KEY_LEFT_SHIFT);
-        if (current_fincrement && !previous_fincrement)
+        for (int i = 0; i < files; i++)
         {
-            file_selected++;
+            free(file_renders[i]);
+            file_renders[i] = nullptr;
+        }
+
+        for (int i = 0; i < binaries; i++)
+        {
+            free(binary_renders[i]);
+            binary_renders[i] = nullptr;
+        }
+
+        total = 0;
+        directories = 0;
+        files = 0;
+        binaries = 0;
+
+        for (const auto &entry : fs::directory_iterator(current_directory))
+        {
+            total++;
+            if (entry.is_directory())
+            {
+                directory_names[directories] = entry.path().filename().string();
+                directories++;
+            }
+            else if (is_binary(entry.path().string()))
+            {
+                binary_names[binaries] = entry.path().filename().string();
+                binaries++;
+            }
+            else if (entry.is_regular_file())
+            {
+                file_names[files] = entry.path().filename().string();
+                files++;
+            }
+        }
+
+        const float spacing = 1.5f;
+        const float startDist = 3.0f;
+
+        auto trianglePos = [&](int i, float yaw, float &x, float &y, float &z)
+        {
+            int row = (int)((sqrtf(8.0f * i + 1.0f) - 1.0f) / 2.0f);
+            int col = i - row * (row + 1) / 2;
+
+            float lx = (col - row / 2.0f) * spacing;
+            float lz = startDist + row * spacing;
+
+            float c = cosf(yaw), s = sinf(yaw);
+            x = lx * c + lz * s;
+            z = -lx * s + lz * c;
+
+            float t = (float)i / 25.0f;
+            y = -(t * t);
+        };
+
+        const float rotation_speed = 0.5;
+        static float rotation_modifier = 0.0;
+        rotation_modifier += rotation_speed * delta_time;
+
+        for (int i = 0; i < directories; i++)
+        {
+            float x, y, z;
+            trianglePos(i, 0.0f + rotation_modifier, x, y, z);
+            directory_renders[i] = new Directory(x, y, z, 0, 0.0f + rotation_modifier, 0);
+        }
+
+        for (int i = 0; i < files; i++)
+        {
+            float x, y, z;
+            trianglePos(i, -2.1f + rotation_modifier, x, y, z);
+            file_renders[i] = new File(x, y, z, 0, -2.1f + rotation_modifier, 0);
+        }
+
+        for (int i = 0; i < binaries; i++)
+        {
+            float x, y, z;
+            trianglePos(i, 2.1f + rotation_modifier, x, y, z);
+            binary_renders[i] = new Binary(x, y, z, 0, 2.1f + rotation_modifier, 0);
+        }
+
+        if (Input::get_key_down(GLFW_KEY_LEFT_SHIFT))
+        {
+            static float cooldown = 0.0;
+            cooldown -= delta_time;
+
+            if (cooldown <= 0)
+            {
+                file_selected++;
+                cooldown = 0.05;
+            }
 
             if (file_selected > (binaries + files + directories))
             {
                 file_selected = 0;
             }
-
-            lock_fincrement = !lock_fincrement;
         }
-        previous_fincrement = current_fincrement;
-
-        static bool previous_fdincrement = false;
-        static bool lock_fdincrement = false;
-        bool current_fdincrement = Input::get_key_down(GLFW_KEY_LEFT_CONTROL);
-        if (current_fdincrement && !previous_fdincrement)
+        
+        if (Input::get_key_down(GLFW_KEY_LEFT_CONTROL))
         {
-            file_selected--;
+            static float cooldown = 0.0;
+            cooldown -= delta_time;
+
+            if (cooldown <= 0)
+            {
+                file_selected--;
+                cooldown = 0.05;
+            }
 
             if (file_selected < 0)
             {
                 file_selected = binaries + files + directories;
             }
-
-            lock_fdincrement = !lock_fdincrement;
         }
-        previous_fdincrement = current_fdincrement;
 
         static bool previous_selection = false;
         static bool lock_selection = false;
@@ -311,9 +321,37 @@ int main()
         }
         previous_selection = current_selection;
 
-        center->get_transform()->pitch += 0.1;
+        static bool previous_return = false;
+        static bool lock_return = false;
+        bool current_return = Input::get_key_down(GLFW_KEY_ESCAPE);
+        if (current_return && !previous_return)
+        {
+            for (int i = current_directory.length() - 1; i >= 0; i--)
+            {
+                if (current_directory.c_str()[i] == '/')
+                {
+                    current_directory.pop_back();
+
+                    if (current_directory.empty())
+                    {
+                        gltTerminate();
+                        glfwTerminate();
+                        return 0;
+                    }
+
+                    break;
+                }
+                else
+                {
+                    current_directory.pop_back();
+                }
+            }
+
+            lock_return = !lock_return;
+        }
+        previous_return = current_return;
+
         center->get_transform()->yaw += 0.1;
-        center->get_transform()->roll += 0.1;
         center->draw(modelLoc, objectTypeLoc);
 
         for (int i = 0; i < directories; i++)
@@ -346,6 +384,8 @@ int main()
 
                 if (selecting)
                 {
+                    std::string command = "cd " + current_directory + " && nvim " + file_names[i];
+                    std::system(command.c_str());
                     selecting = false;
                 }
             }

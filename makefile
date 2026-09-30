@@ -2,7 +2,7 @@ CXX      := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2
 LDLIBS   := -lGLEW -lglfw -lGL
 
-TARGET    := explore
+TARGET    := plore
 PREFIX    ?= /usr/local
 BINDIR    := $(PREFIX)/bin
 SHADERDIR := $(PREFIX)/share/$(TARGET)
