@@ -8,7 +8,7 @@ Running Instructions
   1. plore
 
 Controls
-  Enter - Select a file or directory
-  Escape - Return to the previous directory
-  Shift - Navigate forwards
-  Control - Navigate backwards
+  1. Enter - Select a file or directory
+  2. Escape - Return to the previous directory
+  3. Shift - Navigate forwards
+  4. Control - Navigate backwards
