@@ -120,6 +120,10 @@ int main()
     float file_selected = -1;
     bool selecting = false;
 
+    GLTtext *directory_text = gltCreateText();
+    GLTtext *next_directory_text = gltCreateText();
+    GLTtext *file_text = gltCreateText();
+
     float camera_x = 0, camera_y = 0;
 
     while (!glfwWindowShouldClose(window))
@@ -130,6 +134,15 @@ int main()
 
         glClearColor(0.133f, 0.141f, 0.212f, 1.0f); 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        gltSetText(directory_text, current_directory.c_str());
+
+        gltBeginDraw();
+        gltColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gltDrawText2D(directory_text, 10.0f, 30.0f, 1.5f);
+        gltDrawText2D(next_directory_text, 10.0f, 60.0f, 1.5f);
+        gltDrawText2D(file_text, 10.0f, 90.0f, 1.5f);
+        gltEndDraw();
 
         glUseProgram(shaderProgram);
 
@@ -271,6 +284,22 @@ int main()
         }
         previous_fincrement = current_fincrement;
 
+        static bool previous_fdincrement = false;
+        static bool lock_fdincrement = false;
+        bool current_fdincrement = Input::get_key_down(GLFW_KEY_LEFT_CONTROL);
+        if (current_fdincrement && !previous_fdincrement)
+        {
+            file_selected--;
+
+            if (file_selected < 0)
+            {
+                file_selected = binaries + files + directories;
+            }
+
+            lock_fdincrement = !lock_fdincrement;
+        }
+        previous_fdincrement = current_fdincrement;
+
         static bool previous_selection = false;
         static bool lock_selection = false;
         bool current_selection = Input::get_key_down(GLFW_KEY_ENTER);
@@ -293,11 +322,14 @@ int main()
             {
                 directory_renders[i]->get_transform()->y += selected_elevation;
 
+                gltSetText(next_directory_text, directory_names[i].c_str());
+
                 if (selecting)
                 {
                     directory_renders[i]->get_transform()->y += selected_elevation;
                     std::cout << directory_names[i] << '\n';
                     current_directory.append("/" + directory_names[i]);
+                    file_selected = -1;
                     selecting = false;
                 }
             }
