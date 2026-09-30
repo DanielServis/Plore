@@ -117,7 +117,7 @@ int main()
     glfwSetKeyCallback(window, Input::key_callback);
     glfwSetMouseButtonCallback(window, Input::mouse_button_callback);
 
-    std::string current_directory = "/home/dms";
+    std::string current_directory = "/home";
     int total = 0, directories = 0, files = 0, binaries = 0;
     Center *center = new Center(0, 0, 0, 0, 0, 0);
     Binary *binary_renders[256];
