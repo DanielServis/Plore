@@ -121,7 +121,6 @@ int main()
     bool selecting = false;
 
     GLTtext *directory_text = gltCreateText();
-    GLTtext *next_directory_text = gltCreateText();
     GLTtext *file_text = gltCreateText();
 
     float camera_x = 0, camera_y = 0;
@@ -140,8 +139,7 @@ int main()
         gltBeginDraw();
         gltColor(1.0f, 1.0f, 1.0f, 1.0f);
         gltDrawText2D(directory_text, 10.0f, 30.0f, 1.5f);
-        gltDrawText2D(next_directory_text, 10.0f, 60.0f, 1.5f);
-        gltDrawText2D(file_text, 10.0f, 90.0f, 1.5f);
+        gltDrawText2D(file_text, 10.0f, 60.0f, 1.5f);
         gltEndDraw();
 
         glUseProgram(shaderProgram);
@@ -216,10 +214,12 @@ int main()
                 }
                 else if (is_binary(entry.path().string()))
                 {
+                    binary_names[binaries] = entry.path().filename().string();
                     binaries++;
                 }
                 else if (entry.is_regular_file())
                 {
+                    file_names[files] = entry.path().filename().string();
                     files++;
                 }
             }
@@ -322,12 +322,11 @@ int main()
             {
                 directory_renders[i]->get_transform()->y += selected_elevation;
 
-                gltSetText(next_directory_text, directory_names[i].c_str());
+                gltSetText(file_text, directory_names[i].c_str());
 
                 if (selecting)
                 {
                     directory_renders[i]->get_transform()->y += selected_elevation;
-                    std::cout << directory_names[i] << '\n';
                     current_directory.append("/" + directory_names[i]);
                     file_selected = -1;
                     selecting = false;
@@ -342,6 +341,8 @@ int main()
             if (i == (file_selected - directories))
             {
                 file_renders[i]->get_transform()->y += selected_elevation;
+
+                gltSetText(file_text, file_names[i].c_str());
 
                 if (selecting)
                 {
@@ -358,8 +359,12 @@ int main()
             {
                 binary_renders[i]->get_transform()->y += selected_elevation;
 
+                gltSetText(file_text, binary_names[i].c_str());
+
                 if (selecting)
                 {
+                    std::string command = "cd " + current_directory + " && ./" + binary_names[i];
+                    int rc = std::system(command.c_str());
                     selecting = false;
                 }
             }
